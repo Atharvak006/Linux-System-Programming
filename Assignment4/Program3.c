@@ -1,0 +1,59 @@
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+int main(int argc, char *argv[])
+{
+    int src_fd;
+    int dest_fd;
+    char buffer[1024];
+    ssize_t bytes_read;
+    off_t offset = 0;
+
+    if (argc != 3)
+    {
+        write(1, "Usage: ./copy <source> <destination>\n", 39);
+        return 1;
+    }
+
+    src_fd = open(argv[1], O_RDONLY);
+    if (src_fd == -1)
+    {
+        write(1, "Error: Cannot open source file\n", 31);
+        return 1;
+    }
+
+    dest_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dest_fd == -1)
+    {
+        write(1, "Error: Cannot create destination file\n", 39);
+        close(src_fd);
+        return 1;
+    }
+
+    while (1)
+    {
+        bytes_read = pread(src_fd, buffer, sizeof(buffer), offset);
+        if (bytes_read == 0)
+        {
+            break;
+        }
+        if (bytes_read == -1)
+        {
+            write(1, "Error: Read failed\n", 20);
+            close(src_fd);
+            close(dest_fd);
+            return 1;
+        }
+
+        pwrite(dest_fd, buffer, bytes_read, offset);
+        offset = offset + bytes_read;
+    }
+
+    close(src_fd);
+    close(dest_fd);
+
+    write(1, "File copied using pread & pwrite\n", 33);
+
+    return 0;
+}
